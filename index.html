@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>MIT VPU BUDDY — AI Assistant</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -26,7 +26,7 @@
     body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Lora', Georgia, serif;
       height: 100vh;
       display: flex;
       flex-direction: column;
@@ -85,7 +85,7 @@
     }
 
     .logo-text {
-      font-family: 'Syne', sans-serif;
+      font-family: 'Playfair Display', Georgia, serif;
       font-size: 1.4rem;
       font-weight: 800;
       letter-spacing: -0.02em;
@@ -119,59 +119,6 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
     }
-
-    .config-bar {
-      position: relative;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 20px;
-      background: rgba(19,19,26,0.9);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .config-bar label {
-      font-size: 0.75rem;
-      color: var(--muted);
-      white-space: nowrap;
-      font-family: 'Syne', sans-serif;
-      font-weight: 600;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-
-    .config-bar input {
-      flex: 1;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 7px 12px;
-      color: var(--text);
-      font-size: 0.82rem;
-      font-family: 'DM Sans', sans-serif;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-
-    .config-bar input:focus { border-color: var(--accent); }
-    .config-bar input::placeholder { color: var(--muted); }
-
-    .save-btn {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 7px 16px;
-      font-size: 0.78rem;
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: opacity 0.2s, transform 0.15s;
-    }
-
-    .save-btn:hover { opacity: 0.88; transform: scale(1.03); }
 
     .chat-area {
       flex: 1;
@@ -311,7 +258,7 @@
     }
 
     .welcome h2 {
-      font-family: 'Syne', sans-serif;
+      font-family: 'Playfair Display', Georgia, serif;
       font-size: 1.7rem;
       font-weight: 800;
       background: linear-gradient(135deg, var(--text), var(--muted));
@@ -378,7 +325,7 @@
       border: none;
       outline: none;
       color: var(--text);
-      font-family: 'DM Sans', sans-serif;
+      font-family: 'Lora', Georgia, serif;
       font-size: 0.93rem;
       resize: none;
       max-height: 130px;
@@ -412,8 +359,6 @@
       margin-top: 9px;
     }
 
-    .footer-note span { color: var(--accent); }
-
     .error-bubble {
       background: rgba(250, 80, 80, 0.1);
       border: 1px solid rgba(250,80,80,0.3);
@@ -436,7 +381,7 @@
       padding: 9px 20px;
       border-radius: 100px;
       font-size: 0.82rem;
-      font-family: 'Syne', sans-serif;
+      font-family: 'Playfair Display', Georgia, serif;
       font-weight: 600;
       z-index: 100;
       animation: toastIn 0.3s ease, toastOut 0.3s ease 1.5s forwards;
@@ -465,17 +410,11 @@
   </div>
 </header>
 
-<div class="config-bar">
-  <label>n8n Webhook</label>
-  <input type="text" id="webhookUrl" placeholder="https://your-n8n.com/webhook/xxxx" />
-  <button class="save-btn" onclick="saveWebhook()">Save</button>
-</div>
-
 <div class="chat-area" id="chatArea">
   <div class="welcome" id="welcomeScreen">
     <div class="welcome-icon">✦</div>
     <h2>Hello, I'm MIT VPU BUDDY</h2>
-    <p>Your intelligent campus assistant powered by n8n. Ask me anything about MIT VPU — admissions, courses, events, and more!</p>
+    <p>Your intelligent campus assistant. Ask me anything about MIT VPU — admissions, courses, events, and more!</p>
     <div class="suggestions">
       <div class="suggestion-chip" onclick="sendSuggestion(this)">🎓 Admission process</div>
       <div class="suggestion-chip" onclick="sendSuggestion(this)">📚 Available courses</div>
@@ -494,27 +433,18 @@
       </svg>
     </button>
   </div>
-  <div class="footer-note">MIT VPU BUDDY · Powered by <span>n8n</span> · Connect your webhook above</div>
+  <div class="footer-note">© MIT VPU BUDDY — Your Campus AI Assistant</div>
 </div>
 
 <script>
-  let webhookUrl = localStorage.getItem('n8n_webhook') || '';
+  // ── CONFIGURE YOUR BACKEND URL HERE ──────────────────────────────────────────
+  const WEBHOOK_URL = 'YOUR_WEBHOOK_URL_HERE'; // ← paste your URL here
+  // ─────────────────────────────────────────────────────────────────────────────
+
   let isLoading = false;
   const chatArea = document.getElementById('chatArea');
   const userInput = document.getElementById('userInput');
   const sendBtn  = document.getElementById('sendBtn');
-
-  if (webhookUrl) {
-    document.getElementById('webhookUrl').value = webhookUrl;
-  }
-
-  function saveWebhook() {
-    const val = document.getElementById('webhookUrl').value.trim();
-    if (!val) return;
-    webhookUrl = val;
-    localStorage.setItem('n8n_webhook', val);
-    showToast('Webhook saved!');
-  }
 
   function showToast(msg) {
     document.querySelectorAll('.toast').forEach(t => t.remove());
@@ -617,12 +547,6 @@
     const text = userInput.value.trim();
     if (!text || isLoading) return;
 
-    if (!webhookUrl) {
-      showToast('Please enter your n8n webhook URL first!');
-      document.getElementById('webhookUrl').focus();
-      return;
-    }
-
     hideWelcome();
     appendMessage(text, 'user');
     userInput.value = '';
@@ -632,7 +556,7 @@
     showTyping();
 
     try {
-      const response = await fetch(webhookUrl, {
+      const response = await fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -647,10 +571,10 @@
       const data = await response.json();
 
       const reply =
-        data?.output           ||
-        data?.message          ||
-        data?.reply            ||
-        data?.text             ||
+        data?.output  ||
+        data?.message ||
+        data?.reply   ||
+        data?.text    ||
         (typeof data === 'string' ? data : null) ||
         JSON.stringify(data);
 
@@ -660,9 +584,9 @@
     } catch (err) {
       hideTyping();
       if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-        appendError('Cannot reach n8n. Check your webhook URL and make sure n8n is running.');
+        appendError('Unable to connect. Please try again later.');
       } else {
-        appendError(`Error: ${err.message}`);
+        appendError('Something went wrong. Please try again.');
       }
     } finally {
       isLoading = false;

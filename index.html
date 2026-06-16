@@ -289,11 +289,18 @@
     const lines = text.split('\n');
     let result = '';
     let i = 0;
+    let inList = false;
 
     while (i < lines.length) {
       const line = lines[i];
 
-      // Heading ##
+      // Handle closing the list if the current line is NOT a bullet point
+      if (inList && !/^([\*\-\u2022])\s/.test(line.trim())) {
+        result += '</ul>';
+        inList = false;
+      }
+
+      // Heading ###
       if (/^###\s/.test(line)) {
         result += '<h4 style="margin:10px 0 4px;font-family:\'Playfair Display\',Georgia,serif;font-size:0.95rem;color:var(--accent)">' + esc(line.replace(/^###\s/, '')) + '</h4>';
         i++; continue;
@@ -318,9 +325,14 @@
         continue;
       }
 
-      // Bullet list
-      if (/^[\*\-]\s/.test(line)) {
-        result += '<li style="margin:3px 0 3px 16px">' + inline(line.replace(/^[\*\-]\s/, '')) + '</li>';
+      // Bullet list (handles *, -, and standard Unicode bullet points •)
+      if (/^([\*\-\u2022])\s/.test(line.trim())) {
+        if (!inList) {
+          result += '<ul style="margin: 8px 0; padding-left: 20px; list-style-type: disc;">';
+          inList = true;
+        }
+        const cleanLine = line.trim().replace(/^([\*\-\u2022])\s/, '');
+        result += '<li style="margin:4px 0; color:var(--text);">' + inline(cleanLine) + '</li>';
         i++; continue;
       }
 
@@ -337,9 +349,15 @@
       }
 
       // Normal paragraph
-      result += '<p style="margin:3px 0">' + inline(line) + '</p>';
+      result += '<p style="margin:5px 0; line-height: 1.6;">' + inline(line) + '</p>';
       i++;
     }
+
+    // Safeguard to close list if text ends inside it
+    if (inList) {
+      result += '</ul>';
+    }
+
     return result;
   }
 
@@ -418,7 +436,6 @@
       
       let data = await response.json();
       
-      // Unpack n8n array format if returned inside an array wrap
       if (Array.isArray(data) && data.length > 0) {
         data = data[0];
       }

@@ -97,12 +97,12 @@
     .avatar.bot { background: linear-gradient(135deg, var(--accent), var(--accent3)); box-shadow: 0 0 14px var(--glow); }
     .avatar.user-av { background: linear-gradient(135deg, var(--accent2), var(--accent)); }
     .bubble {
-      max-width: min(70%, 540px); padding: 13px 17px;
+      max-width: min(85%, 720px); padding: 16px 20px;
       border-radius: 18px; font-size: 0.92rem; line-height: 1.6;
     }
     .bubble.bot { background: var(--bot-bubble); border: 1px solid var(--border); border-bottom-left-radius: 4px; color: var(--text); }
     .bubble.user { background: var(--user-bubble); border-bottom-right-radius: 4px; color: #fff; }
-    .bubble .time { font-size: 0.68rem; color: var(--muted); margin-top: 5px; display: block; }
+    .bubble .time { font-size: 0.68rem; color: var(--muted); margin-top: 8px; display: block; }
     .bubble.user .time { color: rgba(255,255,255,0.55); }
     .typing-row { display: flex; align-items: flex-end; gap: 10px; }
     .typing-bubble {
@@ -286,6 +286,14 @@
   }
 
   function renderMarkdown(text) {
+    // Intercept course logs to construct explicit tables when matching structured lists
+    if (text.includes('Credits:') || text.includes('credits')) {
+      const courseLines = text.split('\n').filter(l => /^\d+\.\s+[A-Z]{2,4}\d+/.test(l.trim()) || /^[•\*\-]\s+[A-Z]{2,4}\d+/.test(l.trim()));
+      if (courseLines.length >= 3) {
+        return buildAutoCourseTable(text, courseLines);
+      }
+    }
+
     const lines = text.split('\n');
     let result = '';
     let i = 0;
@@ -294,7 +302,6 @@
     while (i < lines.length) {
       const line = lines[i];
 
-      // Handle closing the list if the current line is NOT a bullet point
       if (inList && !/^([\*\-\u2022])\s/.test(line.trim())) {
         result += '</ul>';
         inList = false;
@@ -314,7 +321,7 @@
         i++; continue;
       }
 
-      // Table detection: line starts with |
+      // Standard Table detection
       if (/^\|/.test(line)) {
         let tableLines = [];
         while (i < lines.length && /^\|/.test(lines[i])) {
@@ -325,7 +332,7 @@
         continue;
       }
 
-      // Bullet list (handles *, -, and standard Unicode bullet points •)
+      // Bullet list
       if (/^([\*\-\u2022])\s/.test(line.trim())) {
         if (!inList) {
           result += '<ul style="margin: 8px 0; padding-left: 20px; list-style-type: disc;">';
@@ -338,7 +345,7 @@
 
       // Numbered list
       if (/^\d+\.\s/.test(line)) {
-        result += '<li style="margin:3px 0 3px 16px;list-style:decimal">' + inline(line.replace(/^\d+\.\s/, '')) + '</li>';
+        result += '<li style="margin:4px 0 4px 20px; list-style: decimal; color:var(--text);">' + inline(line.replace(/^\d+\.\s/, '')) + '</li>';
         i++; continue;
       }
 
@@ -349,20 +356,77 @@
       }
 
       // Normal paragraph
-      result += '<p style="margin:5px 0; line-height: 1.6;">' + inline(line) + '</p>';
+      result += '<p style="margin:6px 0; line-height: 1.6;">' + inline(line) + '</p>';
       i++;
     }
 
-    // Safeguard to close list if text ends inside it
-    if (inList) {
-      result += '</ul>';
-    }
-
+    if (inList) result += '</ul>';
     return result;
   }
 
+  function buildAutoCourseTable(fullText, courseLines) {
+    let headerText = '';
+    let footerText = '';
+    const lines = fullText.split('\n');
+    let dynamicRows = '';
+
+    // Collect preceding text lines as introduction header block
+    lines.forEach(line => {
+      if (!/^\d+\.\s+[A-Z]{2,4}\d+/.test(line.trim()) && !/^[•\*\-]\s+[A-Z]{2,4}\d+/.test(line.trim())) {
+        if (courseLines.some(cl => fullText.indexOf(cl) > fullText.indexOf(line))) {
+          if(line.trim()) headerText += `<p style="margin:4px 0;">${inline(line)}</p>`;
+        } else {
+          if(line.trim()) footerText += `<p style="margin:8px 0 4px; color:var(--muted); font-size:0.85rem;">${inline(line)}</p>`;
+        }
+      }
+    });
+
+    let htmlTable = '<div style="overflow-x:auto; margin:14px 0; border-radius:8px; border:1px solid var(--border);">';
+    htmlTable += '<table style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left;">';
+    htmlTable += '<tr style="background:rgba(124,109,250,0.15); color:var(--accent); font-family:\'Playfair Display\',serif;">';
+    htmlTable += '<th style="padding:10px 12px; border-bottom:1px solid var(--border);">Code</th>';
+    htmlTable += '<th style="padding:10px 12px; border-bottom:1px solid var(--border);">Course Title</th>';
+    htmlTable += '<th style="padding:10px 12px; border-bottom:1px solid var(--border); text-align:center;">L-T-P</th>';
+    htmlTable += '<th style="padding:10px 12px; border-bottom:1px solid var(--border); text-align:center;">Credits</th>';
+    htmlTable += '</tr>';
+
+    courseLines.forEach((rowLine, index) => {
+      // Clean prefix bullets/numbers
+      let clean = rowLine.replace(/^\d+\.\s+/, '').replace(/^([\*\-\u2022])\s+/, '');
+      
+      // Split components safely using delimiter variations
+      let parts = clean.split(/\s+[\-\u2014]\s+/);
+      if(parts.length < 2) parts = clean.split(' — ');
+
+      let code = parts[0] ? parts[0].trim() : '';
+      let title = parts[1] ? parts[1].trim() : '';
+      let ltp = '-';
+      let credits = '-';
+
+      // Parse structures containing explicit metadata tokens inside string fragments
+      parts.forEach(part => {
+        if (/\d\-\d\-\d/.test(part)) ltp = part.match(/\d\-\d\-\d/)[0];
+        if (/Credit[s]?:\s*\d+/i.test(part)) credits = part.match(/Credit[s]?:\s*(\d+)/i)[1];
+        else if (/\d+\s*credit/i.test(part)) credits = part.match(/(\d+)\s*credit/i)[1];
+      });
+
+      // Cleanup remaining garbage variables attached onto Title string fields
+      title = title.replace(/\([A-Za-z\s]+\)/g, '').split('Credits')[0].split(/\d\-\d\-\d/)[0].trim();
+
+      const bg = index % 2 === 1 ? 'background:rgba(255,255,255,0.02)' : '';
+      dynamicRows += `<tr style="${bg}">`;
+      dynamicRows += `<td style="padding:9px 12px; border-bottom:1px solid rgba(255,255,255,0.04); font-weight:600; color:var(--accent3);">${code}</td>`;
+      dynamicRows += `<td style="padding:9px 12px; border-bottom:1px solid rgba(255,255,255,0.04); color:var(--text);">${title}</td>`;
+      dynamicRows += `<td style="padding:9px 12px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; color:var(--muted);">${ltp}</td>`;
+      dynamicRows += `<td style="padding:9px 12px; border-bottom:1px solid rgba(255,255,255,0.04); text-align:center; font-weight:600; color:var(--accent2);">${credits}</td>`;
+      dynamicRows += '</tr>';
+    });
+
+    htmlTable += dynamicRows + '</table></div>';
+    return headerText + htmlTable + footerText;
+  }
+
   function buildTable(lines) {
-    // Filter out separator lines (---|---|---)
     const rows = lines.filter(l => !/^\|[\s\-\|:]+\|$/.test(l.trim()));
     if (rows.length === 0) return '';
 

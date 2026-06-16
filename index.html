@@ -415,16 +415,23 @@
         })
       });
       if (!response.ok) throw new Error('HTTP ' + response.status);
-      const data = await response.json();
+      
+      let data = await response.json();
+      
+      // Unpack n8n array format if returned inside an array wrap
+      if (Array.isArray(data) && data.length > 0) {
+        data = data[0];
+      }
+
       const reply =
         data?.output ||
         data?.text ||
+        data?.response ||
         data?.message ||
         data?.reply ||
-        (Array.isArray(data) && data[0]?.output) ||
-        (Array.isArray(data) && data[0]?.text) ||
         (typeof data === 'string' ? data : null) ||
         JSON.stringify(data);
+
       hideTyping();
       appendMessage(reply, 'bot');
     } catch (err) {
